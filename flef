@@ -1,0 +1,84 @@
+#!/usr/bin/bash -e
+
+FLEFDIR="${FLEFDIR:-"$HOME/flef"}"
+FLEFDATEFORMAT="${FLEFDATEFORMAT:-%y-%m-%d}"
+
+# Create ~/flef/ if it does not exist
+
+if [[ ! ( -d "${FLEFDIR}" ) ]] ; then
+    mkdir "${FLEFDIR}"
+fi
+
+DATE="$(date +"${FLEFDATEFORMAT}")"
+FLEETING_DIR="${FLEFDIR}/$DATE"
+
+if [[ $1 == 'help' ]]; then
+    echo "Usage: flef [project_name|last|help]"
+    echo "  no arguments    Go to the last project from today, or create a new one."
+    echo "  project_name    Create a project directory with the provided name"
+    echo "                  (e.g., flef my-project)"
+    echo "  last            Move into the last modified flef directory"
+    echo "  help            Show this usage outline"
+    exit 0
+
+elif [[ $1 == 'last' ]] ; then
+    # Find the last modified flef directory
+
+    RECENT_FLEETING_DIR=$(
+	find "${FLEFDIR}"                     \
+	    -mindepth 1 -maxdepth 1 -type d   \
+	    -printf '%T@\t%p\n'             | \
+	sort -n | tail -n 1 | cut -f2
+    )
+
+    if [[ $RECENT_FLEETING_DIR ]] ; then
+	FLEETING_DIR="${RECENT_FLEETING_DIR}"
+    else
+	echo "No last modified flef directory"
+	exit 1
+    fi
+
+elif [[ $1 ]] ; then
+    # Use a flef directory with a given name, creating it if needed
+
+    FLEETING_DIR="${FLEETING_DIR}_${1}"
+
+else
+    # Find the most recently modified flef directory with the current date
+
+    RECENT_FLEETING_DIR=$(
+	find "${FLEFDIR}"                      \
+	    -maxdepth 1 -type d -name "$DATE*" \
+	    -printf '%T@\t%p\n'              | \
+	sort -n | tail -n 1 | cut -f2
+    )
+
+    if [[ "$RECENT_FLEETING_DIR" ]] ; then
+	FLEETING_DIR="${RECENT_FLEETING_DIR}"
+    fi
+fi
+
+# If the fleeting directory doesn't exist, create it
+
+if [[ ! ( -d "$FLEETING_DIR" || -L "$FLEETING_DIR") ]] ; then
+    mkdir "$FLEETING_DIR"
+fi
+
+echo "Starting a new shell"
+
+echo $FLEETING_DIR
+cd "$FLEETING_DIR"
+
+# Detect Python virtualenv directories, and inject them into the shell
+
+VIRTUALENV_EXEC=""
+
+if [[ -d "./venv" ]] ; then 
+    VIRTUALENV_EXEC='source ./venv/bin/activate ;'
+fi
+
+if [[ -d "./env"  ]] ; then 
+    VIRTUALENV_EXEC='source ./env/bin/activate ;'
+fi
+
+bash -c "$VIRTUALENV_EXEC exec $SHELL"
