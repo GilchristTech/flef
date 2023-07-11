@@ -43,6 +43,31 @@ to alias `flef` to `mini`, and have it use the `~/mini/`
 directory, and for ease-of-typing reasons I prefer an
 unconventional date format.
 
+## Installation
+
+`flef` is a simple bash script with no dependencies, and
+can be installed by copying the `flef` file anywhere in your
+`PATH`. Here's a way it can be installed locally for one
+user. First, if it does not already exist, create
+the `~/.local/bin/` directory:
+
+```bash
+mkdir -p ~/.local/bin
+```
+
+Then ensure that directory is in your `PATH`, allowing files inside it to be
+found as shell commands by ensuring this line exists within your `.bashrc` file:
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Then, to install, clone the `flef` repository into the directory of your choice
+(in this example, I use `~/.flef/`, and symlink it into your local `bin/`:
+```bash
+git clone https://github.com/GilchristTech/flef.git ~/.flef
+ln -s ~/.flef/flef ~/.local/bin/flef
+```
+
 ## Usage
 
 ```bash
