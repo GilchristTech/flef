@@ -1,11 +1,12 @@
 #!/usr/bin/bash -e
 
 function flef-usage () {
-  echo "Usage: flef [project_name|last|help]"
-  echo "  no arguments    Go to the last project from today, or create a new one."
+  echo "Usage: flef [project_name|last [n]|help]"
+  echo "  no arguments    Go to the last project from today, or create a new one"
   echo "  project_name    Create a project directory with the provided name"
   echo "                  (e.g., flef my-project)"
-  echo "  last            Move into the last modified flef directory"
+  echo "  last [n]        Move into the last modified flef directory,"
+  echo "                  optionally selecting the Nth most recent directorie"
   echo "  help            Show this usage outline"
 }
 
@@ -35,20 +36,31 @@ function flef-main () {
 
   if [[ $1 == 'help' ]]; then
     flef-usage
-    exit 0
+    return 0
 
   elif [[ $1 == 'last' ]] ; then
     # Find the last modified flef directory
 
+    LAST_OFFSET=$2
+
+    if [ $LAST_OFFSET  ] ; then
+      if [[ ! $LAST_OFFSET =~ ^[0-9]+$ ]] ; then
+        echo "error: command 'flef last [number]' expects number to be a positive integer"
+        return 1
+      fi
+    else
+      LAST_OFFSET=1
+    fi
+
     RECENT_FLEETING_DIR=$(
-        flef-find | sort -n | tail -n 1 | cut -f2
+        flef-find | sort -n | tail -n $LAST_OFFSET | head -n 1 | cut -f2
     )
 
     if [[ $RECENT_FLEETING_DIR ]] ; then
         FLEETING_DIR="${RECENT_FLEETING_DIR}"
     else
         echo "No last modified flef directory"
-        exit 1
+        return 1
     fi
 
   elif [[ $1 ]] ; then

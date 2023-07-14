@@ -90,7 +90,7 @@ prevents it from creating a new shell.
 ## Usage
 
 ```bash
-$ flef [project_name|last|help]
+$ flef [project_name|last [n]|help]
 ```
 
 ### `flef`: Default behavior with no arguments
@@ -121,7 +121,7 @@ with the same name and date already exists, it just uses
 that one. After this, for today, invoking `flef` without
 arguments will use that directory.
 
-### `flef last`: Go to the last project
+### `flef last [n]`: Go to the Nth last project
 
 If you want to access the last modified project directory
 (regardless of the date), you can use the `last` argument:
@@ -130,6 +130,13 @@ If you want to access the last modified project directory
 $ flef last
 Starting a new shell
 /home/user/flef/20-12-03
+```
+
+In order to go back even further, you can specify a number,
+N, to go back to the Nth most recent directory. For example,
+to go the fifth most recent project:
+```bash
+$ flef last 5
 ```
 
 ## Environment Variable Configuration
