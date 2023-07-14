@@ -63,11 +63,11 @@ export PATH="$HOME/.local/bin:$PATH"
 ```
 
 Then, to install, clone the `flef` repository into the
-directory of your choice (in this example, I use `~/.flef/`,
-and symlink it into your local `bin/`:
+directory of your choice (in this example, `~/.flef/` is
+used and, and symlinked to the user's local `bin/`:
 ```bash
 git clone https://github.com/GilchristTech/flef.git ~/.flef
-ln -s ~/.flef/flef ~/.local/bin/flef
+ln -s ~/.flef/flef.sh ~/.local/bin/flef
 ```
 
 ### Alias-source installation
@@ -82,7 +82,7 @@ To do this, first ensure `flef` is *not* found inside a
 `$PATH` directory. Then, add the following command to your
 `.bashrc`:
 ```bash
-alias flef="FLEF_USE_SOURCE=1 source /path/to/flef/installation/directory/flef"
+alias flef="FLEF_USE_SOURCE=1 source /path/to/flef/installation/directory/flef.sh"
 ```
 This will cause `flef` to get ran as an alias, and when ran
 prevents it from creating a new shell.
