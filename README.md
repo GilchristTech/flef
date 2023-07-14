@@ -55,18 +55,37 @@ the `~/.local/bin/` directory:
 mkdir -p ~/.local/bin
 ```
 
-Then ensure that directory is in your `PATH`, allowing files inside it to be
-found as shell commands by ensuring this line exists within your `.bashrc` file:
+Then ensure that directory is in your `PATH`, allowing files
+inside it to be found as shell commands by ensuring this
+line exists within your `.bashrc` file:
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Then, to install, clone the `flef` repository into the directory of your choice
-(in this example, I use `~/.flef/`, and symlink it into your local `bin/`:
+Then, to install, clone the `flef` repository into the
+directory of your choice (in this example, I use `~/.flef/`,
+and symlink it into your local `bin/`:
 ```bash
 git clone https://github.com/GilchristTech/flef.git ~/.flef
 ln -s ~/.flef/flef ~/.local/bin/flef
 ```
+
+### Alias-source installation
+
+By default, `flef` creates a new shell inside the project
+directory, but it can also be configured to be ran such that
+`flef`'s code is sourced directory into current shell, and
+the directory is changed in the current shell instead of
+creating a new shell session.
+
+To do this, first ensure `flef` is *not* found inside a
+`$PATH` directory. Then, add the following command to your
+`.bashrc`:
+```bash
+alias flef="FLEF_USE_SOURCE=1 source /path/to/flef/installation/directory/flef"
+```
+This will cause `flef` to get ran as an alias, and when ran
+prevents it from creating a new shell.
 
 ## Usage
 
@@ -118,30 +137,35 @@ Starting a new shell
 You can customize the behavior of `flef` by setting the
 following environment variables:
 
--   `FLEFDIR`:
+-   `FLEF_DIR`:
     The base directory where `flef` will store project
     directories. By default, it is set to `~/flef`. If this
     directory does not exist, `flef` will create it
     automatically. You can customize the base directory by
-    setting the `FLEFDIR` environment variable:
+    setting the `FLEF_DIR` environment variable:
     
     ```bash
-    export FLEFDIR="/path/to/custom/directory"
+    export FLEF_DIR="/path/to/custom/directory"
     ```
 
--   `FLEFDATEFORMAT`:
+-   `FLEF_DATEFORMAT`:
     The date format to be used for the project directories. By
     default, it is set to `%y-%m-%d`, which represents the year,
     month, and day in a two-digit format. You can customize the
-    date format by setting the `FLEFDATEFORMAT` environment
+    date format by setting the `FLEF_DATEFORMAT` environment
     variable to any valid format recognized by the `date`
     command. For example:
     
     ```bash
-    export FLEFDATEFORMAT="%Y-%m-%d"
+    export FLEF_DATEFORMAT="%Y-%m-%d"
     ```
     
     This would use the year, month, and day in a four-digit format.
+
+-   `FLEF_USE_SOURCE`:
+    Prevents `flef` from spawning a new shell, and instead
+    runs everything in the current shell. Meant to be used
+    when `flef` ran with the `source` command.
 
 ## Python Virtual Environments
 
