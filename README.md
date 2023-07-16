@@ -139,6 +139,18 @@ to go the fifth most recent project:
 $ flef last 5
 ```
 
+### `flef rm`: Delete the current project directory
+
+When the current working directory is either a `flef`
+project directory or a subdirectory thereof, the project
+directory can be deleted with the delete command:
+```bash
+$ flef rm
+```
+This will delete the project directory. If in alias-source
+mode, the shell will switch directories into `$FLEF_DIR`,
+otherwise, the working directory will be nonexistent.
+
 ## Environment Variable Configuration
 
 You can customize the behavior of `flef` by setting the

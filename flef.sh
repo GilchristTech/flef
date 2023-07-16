@@ -21,6 +21,64 @@ function flef-find () {
 }
 
 
+function flef-get-project-name () {
+  # Given a path at $1, return the name of the project,
+  # based off the intersection of that path and $FLEF_DIR.
+  # This function does not process symbolic links.
+
+  if [[ ! $1 = $FLEF_DIR/* ]] ; then
+    >&2 echo "error: Directory is not a flef project directory"
+    return 1
+  fi
+
+  echo "$1" | tail -c "+$(echo "${FLEF_DIR}" | wc -c)" | cut -d/ -f2
+  return 0
+}
+
+
+function flef-get-project-path () {
+  if [[ ! $1 = $FLEF_DIR/* ]] ; then
+    >&2 echo "error: Directory is not a flef project directory"
+    return 1
+  fi
+
+  echo "${FLEF_DIR}/$(flef-get-project-name "$1")"
+}
+
+
+function flef-rm () {
+  PROJECT_RM_CONFIRM="${PROJECT_RM_CONFIRM:-1}"
+
+  PROJECT_PATH=$(flef-get-project-path "${PWD}")
+  PROJECT_PATH_STATUS=$?
+
+  if [ $PROJECT_PATH_STATUS != 0 ] ; then
+    return $PROJECT_PATH_STATUS
+  fi
+
+  if [ $PROJECT_RM_CONFIRM ] ; then
+    # Ask a yes or no about deleting, if user says no, exit.
+    # The reason for invoking bash, is in case the command
+    # is being sourced from a shell other than Bash, which
+    # has a different read command, such as Zsh
+
+    echo -n "Delete ${PROJECT_PATH}? [Yn]: "
+
+    if bash -ic 'read -n 1 -r REPLY; [[ ! $REPLY =~ ^[Yy] ]] && [ ! -z $REPLY ]' ; then
+      return 0
+    fi
+  fi
+
+  rm -rf "${PROJECT_PATH}"
+
+  if [ $FLEF_USE_SOURCE ] ; then
+    cd "$FLEF_DIR"
+  else
+    return 0
+  fi
+}
+
+
 function flef-main () {
   FLEF_DIR="${FLEF_DIR:-"$HOME/flef"}"
   FLEF_DATEFORMAT="${FLEF_DATEFORMAT:-%y-%m-%d}"
@@ -32,7 +90,7 @@ function flef-main () {
   fi
 
   DATE="$(date +"${FLEF_DATEFORMAT}")"
-  FLEETING_DIR="${FLEF_DIR}/$DATE"
+  PROJECT_DIR="${FLEF_DIR}/$DATE"
 
   if [[ $1 == 'help' ]]; then
     flef-usage
@@ -52,46 +110,50 @@ function flef-main () {
       LAST_OFFSET=1
     fi
 
-    RECENT_FLEETING_DIR=$(
+    RECENT_PROJECT_DIR=$(
         flef-find | sort -n | tail -n $LAST_OFFSET | head -n 1 | cut -f2
     )
 
-    if [[ $RECENT_FLEETING_DIR ]] ; then
-        FLEETING_DIR="${RECENT_FLEETING_DIR}"
+    if [[ $RECENT_PROJECT_DIR ]] ; then
+        PROJECT_DIR="${RECENT_PROJECT_DIR}"
     else
         echo "No last modified flef directory"
         return 1
     fi
 
+  elif [[ $1 == 'rm' ]] ; then
+    flef-rm
+    return $?
+
   elif [[ $1 ]] ; then
     # Use a flef directory with a given name, creating it if needed
 
-    FLEETING_DIR="${FLEETING_DIR}_${1}"
+    PROJECT_DIR="${PROJECT_DIR}_${1}"
 
   else
     # Find the most recently modified flef directory with the current date
 
-    RECENT_FLEETING_DIR=$(
+    RECENT_PROJECT_DIR=$(
         flef-find -name "$DATE*" | sort -n | tail -n 1 | cut -f2
     )
 
-    if [[ "$RECENT_FLEETING_DIR" ]] ; then
-        FLEETING_DIR="${RECENT_FLEETING_DIR}"
+    if [[ "$RECENT_PROJECT_DIR" ]] ; then
+        PROJECT_DIR="${RECENT_PROJECT_DIR}"
     fi
   fi
 
-  # If the fleeting directory doesn't exist, create it
+  # If the project directory doesn't exist, create it
 
-  if [[ ! ( -d "$FLEETING_DIR" || -L "$FLEETING_DIR") ]] ; then
-    mkdir "$FLEETING_DIR"
+  if [[ ! ( -d "$PROJECT_DIR" || -L "$PROJECT_DIR") ]] ; then
+    mkdir "$PROJECT_DIR"
   fi
 
   if [ ! $FLEF_USE_SOURCE ] ; then
     echo "Starting a new shell"
   fi
 
-  echo $FLEETING_DIR
-  cd "$FLEETING_DIR"
+  echo $PROJECT_DIR
+  cd "$PROJECT_DIR"
 
   # Look for Python virtual environments
 
