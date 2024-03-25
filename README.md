@@ -1,6 +1,11 @@
 # `flef`: Fleeting Folders, a Single-Day Project Utility
 
+<div align="center">
+    <img align="center" src="logo.svg">
+    
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+    
+</div>
 
 `flef` is a small convenience utility for creating and/or
 navigating to single-day project directories without needing
