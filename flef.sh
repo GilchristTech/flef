@@ -244,7 +244,7 @@ function flef-main {
       flef-find -name "$(flef-date)*" | sort -n | tail -n 1 | cut -f2
     )
 
-    if [[ -z "$today_project_dir_status" ]] ; then
+    if [[ -z "$today_project_dir" ]] ; then
       flef-cd "${FLEF_DIR}/$(flef-date)"
       return $?
     fi
