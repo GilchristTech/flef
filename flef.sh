@@ -6,12 +6,18 @@ FLEF_DATEFORMAT="${FLEF_DATEFORMAT:-%y-%m-%d}"
 
 FLEF_USAGE=$(cat <<EOF
 Usage: flef [project_name|last [n]|help]
-  no arguments     Go to the last project from today, or create a new one
-  project_name     Create a project directory with the provided name
-                   (e.g., flef my-project)
-  last [n]         Move into the last modified flef directory,
-                   optionally selecting the Nth most recent directory
-  help             Show this usage outline
+  no arguments        Go to the last project from today, or create a new one
+
+  project_name        Create a project directory with the provided name
+                      (e.g., flef my-project)
+
+  last [n]            Move into the last modified flef directory, optionally
+                      selecting the Nth most recent directory
+
+  link [name?] [dir?] Create a flef project as a symbolic link to another
+                      directory, with an optional name. If no arguments are
+                      specified, the current directory and its name are used.
+  help                Show this usage outline
 EOF
 )
 
@@ -26,7 +32,7 @@ function flef-find {
   # filtering for directories directly under it, and print
   # their modified dates and names (separated by a tab)
 
-  find "${FLEF_DIR}" -mindepth 1 -maxdepth 1 -type d $@ -printf '%T@\t%p\n'
+  find "${FLEF_DIR}" -mindepth 1 -maxdepth 1 \( -type d -o -type l \) $@ -printf '%T@\t%p\n'
   return $?
 }
 
@@ -46,15 +52,19 @@ function flef-find-last {
   fi
 
   local recent_project_dir=$(
-      flef-find | sort -n | tail -n $last_offset | head -n 1 | cut -f2
+    flef-find | sort -n | tail -n $last_offset | head -n 1 | cut -f2
   )
 
-  if [[ ! $recent_project_dir ]] ; then
-      echo "No last modified flef directory"
-      return 1
+  if [[ -z $recent_project_dir ]] ; then
+    return 1
   fi
 
   echo "${recent_project_dir}"
+}
+
+
+function flef-date {
+  date +"${FLEF_DATEFORMAT}"
 }
 
 
@@ -87,6 +97,11 @@ function flef-get-project-path {
 
 function flef-cd {
   local project_dir="${1}"
+
+  if [[ -z $project_dir ]] ; then
+    echo "[flef-cd] error: project directory not defined"
+    return 1
+  fi
 
   # If the project directory doesn't exist, create it
 
@@ -166,15 +181,22 @@ function flef-rm {
 }
 
 
-function flef-main () {
+function flef-link {
+  local source_dir="${2:-"$(pwd)"}"
+  local project_name="${1:-"$(basename "$source_dir")"}"
+  local project_dir="${FLEF_DIR}/$(flef-date)_${project_name}"
+
+  ln -s "${source_dir}" "${project_dir}"
+  echo "$project_dir"
+}
+
+
+function flef-main {
   # Create the flef directory if it does not exist
 
   if [[ ! ( -d "${FLEF_DIR}" ) ]] ; then
     mkdir "${FLEF_DIR}"
   fi
-
-  local date="$(date +"${FLEF_DATEFORMAT}")"
-  local project_dir="${FLEF_DIR}/$date"
 
   if [[ "$1" == 'help' ]]; then
     flef-usage
@@ -182,25 +204,52 @@ function flef-main () {
 
   elif [[ "$1" == 'last' ]] ; then
     shift
-    flef-cd "$(flef-find-last $@)"
+
+    # Find last project directory
+    #
+    # do not assign here, in order to capture status:
+    #   https://stackoverflow.com/a/50494835
+    #
+    local last_project_dir
+    local last_project_status
+    last_project_dir="$(flef-find-last $@)"
+    last_project_status=$?
+
+    if [[ $last_project_status -ne 0 ]] ; then
+      echo "[flef-main] error: Could not find last project directory"
+      return $last_project_status
+    fi
+
+    flef-cd "${last_project_dir}"
     return $?
 
   elif [[ "$1" == 'rm' ]] ; then
     flef-rm
     return $?
 
+  elif [[ "$1" == "link" ]] ; then
+    shift
+    flef-cd "$(flef-link "$@")"
+    return $?
+
   elif [[ $1 ]] ; then
     # Use a flef directory with a given name, creating it if needed
-    flef-cd "${project_dir}_${1}"
+    flef-cd "${FLEF_DIR}/$(flef-date)_${1}"
 
   else
-    # Find the most recently modified flef directory with the current date
+    # Enters the most recently modified flef directory with the current date,
+    # and if not found, creates a new one.
 
-    local recent_project_dir=$(
-      flef-find -name "${date}*" | sort -n | tail -n 1 | cut -f2
+    local today_project_dir=$(
+      flef-find -name "$(flef-date)*" | sort -n | tail -n 1 | cut -f2
     )
 
-    flef-cd "${project_dir}"
+    if [[ -z "$today_project_dir_status" ]] ; then
+      flef-cd "${FLEF_DIR}/$(flef-date)"
+      return $?
+    fi
+
+    flef-cd "${today_project_dir}"
     return $?
   fi
 }

@@ -6,8 +6,8 @@
 navigating to single-day project directories without needing
 to type dates in their names.  Invoking `flef` ensures the
 existence of a project directory, named with the current
-date and starts a shell there; creating a clean
-environment, and helping facilitate a habit of daily coding.
+date, and starts a shell there; creating a clean
+environment and helping facilitate a habit of daily coding.
 
 The most common usage is running `flef` without arguments:
 ```bash
@@ -90,7 +90,7 @@ prevents it from creating a new shell.
 ## Usage
 
 ```bash
-$ flef [project_name|last [n]|help]
+$ flef [project_name|last [n]|rm|link [name [directory]]|help]
 ```
 
 ### `flef`: Default behavior with no arguments
@@ -150,6 +150,21 @@ $ flef rm
 This will delete the project directory. If in alias-source
 mode, the shell will switch directories into `$FLEF_DIR`,
 otherwise, the working directory will be nonexistent.
+
+### `flef link`: Create a flef project with a symlink to an existing directory
+
+Creates a new `flef` directory from an existing folder,
+creating a symbolic link under the `$FLEF_DIR`. If no
+arguments are used, the link will point to the current
+working directory, and its `basename` will be used. The
+first argument after `link` overrides the project name, and
+the second overrides the directory linked to.
+
+```bash
+$ flef link
+$ flef link new-name
+$ flef link new-name ./other-directory/
+```
 
 ## Environment Variable Configuration
 
