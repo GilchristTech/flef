@@ -32,7 +32,7 @@ function flef-find {
   # filtering for directories directly under it, and print
   # their modified dates and names (separated by a tab)
 
-  find "${FLEF_DIR}" -mindepth 1 -maxdepth 1 \( -type d -o -type l \) $@ -printf '%T@\t%p\n'
+  find "${FLEF_DIR}" -mindepth 1 -maxdepth 1 -follow \( -type d -o -type l \) $@ -printf '%T@\t%p\n'
   return $?
 }
 
