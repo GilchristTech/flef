@@ -7,7 +7,7 @@
     
 </div>
 
-`flef` is a small convenience utility for creating and/or
+`flef` is a small convenience utility for creating and
 navigating to single-day project directories without needing
 to type dates in their names.  Invoking `flef` ensures the
 existence of a project directory, named with the current
@@ -23,22 +23,27 @@ Starting a new shell
 
 This either creates or finds the most recent project
 directory for today, then and starts a new shell there. The
-tool is written with brevity in mind, to make it easy to
-create new terminals and get them to where they need to be.
+tool is written with brevity in mind, making it fast to
+create new terminals and navigate them where they need to
+be.
 
 ## Motivation
 
 As a developer, I often find myself needing a temporary
 space to experiment, memorize concepts, or debug code by
-creating a fresh project. To promote speed and recollection,
-I try to keep these projects constrained to a single day of
-development, calling them "mini-projects".
+creating a fresh directory with a tiny project. To promote
+speed and recollection, I try to keep these projects
+constrained to a single day of development, calling them
+"mini-projects".
 
-However, managing project directories manually became
-cumbersome and wreaked havoc on my cluttered home directory.
-I started placing these mini-projects inside
-`~/$HOME/mini/%y%m-%d_$NAME`, but found manually typing in
-that string format tedious.
+At first, manually creating project directories directory
+wreaked havoc on my cluttered home directory.  Organizing
+them in a specific directory structure,
+`~/$HOME/mini/%y%m-%d_$NAME`, with a new major directory for
+these projects and with the date in their names, a new
+problem emerged: the problem of minor inconvenience. Instead
+of spending seconds typing directory names, I typed up a
+small shell utility.
 
 Initially written under the name `mini`, I wrote `flef` to
 save a few keystrokes I do each day, and it also keeps my
@@ -50,29 +55,21 @@ unconventional date format.
 
 ## Installation
 
-`flef` is a simple bash script with no dependencies, and
-can be installed by copying the `flef` file anywhere in your
-`PATH`. Here's a way it can be installed locally for one
-user. First, if it does not already exist, create
-the `~/.local/bin/` directory:
+`flef` is a simple bash script with no dependencies, and as
+an opinionated shell tool oriented around the home
+directory, it is recommended to install for a single user
+without root privileges.  After cloning the repo, it can be
+installed by copying the `flef.sh` file anywhere in your
+`PATH`, creating a link to that file, or by creating an
+alias to the `flef.sh` script. For convenience, there is an
+interactive `install.sh` script, which attempts to automate
+a setup.
 
-```bash
-mkdir -p ~/.local/bin
-```
-
-Then ensure that directory is in your `PATH`, allowing files
-inside it to be found as shell commands by ensuring this
-line exists within your `.bashrc` file:
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-Then, to install, clone the `flef` repository into the
-directory of your choice (in this example, `~/.flef/` is
-used and, and symlinked to the user's local `bin/`:
+To clone the repo and run the installer, one can run the following:
 ```bash
 git clone https://github.com/GilchristTech/flef.git ~/.flef
-ln -s ~/.flef/flef.sh ~/.local/bin/flef
+cd ~/.flef/
+./install.sh
 ```
 
 ### Alias-source installation
