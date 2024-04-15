@@ -3,7 +3,16 @@
 # If HOME is not set, figure it out by expanding ~/
 HOME="${HOME:-"$(bash -c 'echo ~/')"}"
 
+yes=
+if [[ "$1" -eq "--yes" ]] ; then
+  yes=true
+fi
+
 function yes-or-no {
+  if [[ "$yes" ]] ; then
+    echo
+    return 1;
+  fi
   reply=""
   reply="$(bash -ic 'read -n 1 -r reply_subshell; echo "$reply_subshell"')"
   if [[ ! $reply =~ ^[Yy] ]] && [ ! -z $reply ] ; then
@@ -15,15 +24,15 @@ function yes-or-no {
   return 0
 }
 
-flef_installation_dir="$(cd "$(dirname "$BASH_SOURCE" )" && pwd)"
+flef_installation_dir="$(cd "$(dirname "$0" )" && pwd -P)"
 
 flef_config_file=""
 if [[ -z "$flef_config_file" ]]; then
   flef_config_file="${flef_installation_dir}/flef.config.sh"
 fi
 
-echo -n "Configuration file detected at $flef_config_file. Load settings from the existing configuration? [Yn]"
 if yes-or-no ; then
+  echo -n "Configuration file detected at $flef_config_file. Load settings from the existing configuration? [Yn]"
   source "$flef_config_file"
 fi
 
@@ -36,7 +45,9 @@ shell_config_file=""
 
 while true ; do
   shell_name="$(basename $SHELL)"
-  read -p "Install on which shell? [$shell_name] " shell_name
+  if [[ ! "$yes" ]] ; then
+    read -p "Install on which shell? [$shell_name] " shell_name
+  fi
   shell_name="${shell_name:-$(basename $SHELL)}"
   shell_config_file=""
 
@@ -66,7 +77,9 @@ if [[ $FLEF_DIR ]] ; then
   flef_dir_prompt_value="current: $FLEF_DIR"
 fi
 flef_dir=""
-read -p "Projects directory? [$flef_dir_prompt_value] " flef_dir
+if [[ ! "$yes" ]] ; then
+  read -p "Projects directory? [$flef_dir_prompt_value] " flef_dir
+fi
 flef_dir="${flef_dir:-"$FLEF_DIR"}"
 
 # Date format
@@ -76,7 +89,9 @@ if [[ $FLEF_DATEFORMAT ]] ; then
   flef_dateformat_prompt_value="current: $FLEF_DATEFORMAT"
 fi
 flef_dateformat=""
-read -p "Date format ('man date' for reference)? [$flef_dateformat_prompt_value] " flef_dateformat
+if [[ ! "$yes" ]] ; then
+  read -p "Date format ('man date' for reference)? [$flef_dateformat_prompt_value] " flef_dateformat
+fi
 flef_dateformat="${flef_dateformat:-"$FLEF_DATEFORMAT"}"
 
 # Source mode

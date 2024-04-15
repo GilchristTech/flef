@@ -55,15 +55,15 @@ unconventional date format.
 
 ## Installation
 
-`flef` is a simple bash script with no dependencies, and as
-an opinionated shell tool oriented around the home
-directory, it is recommended to install for a single user
-without root privileges.  After cloning the repo, it can be
-installed by copying the `flef.sh` file anywhere in your
-`PATH`, creating a link to that file, or by creating an
-alias to the `flef.sh` script. For convenience, there is an
-interactive `install.sh` script, which attempts to automate
-a setup.
+`flef` is a simple bash script with (almost&ast;) no
+dependencies, and as an opinionated shell tool oriented
+around the home directory, it is recommended to install for
+a single user without root privileges.  After cloning the
+repo, it can be installed by copying the `flef.sh` file
+anywhere in your `PATH`, creating a link to that file, or by
+creating an alias to the `flef.sh` script. For convenience,
+there is an interactive `install.sh` script, which attempts
+to automate a setup.
 
 To clone the repo and run the installer, one can run the following:
 ```bash
@@ -71,6 +71,13 @@ git clone https://github.com/GilchristTech/flef.git ~/.flef
 cd ~/.flef/
 ./install.sh
 ```
+
+\* The sync features are written in Perl, and so Perl is
+an optional dependency. Perl was chosen because it comes
+installed on the vast majority of \*nix systems, and is
+unlikely require any additional setup, allowing the sync
+functionality to install `flef` for a user on another
+machine over SSH without touching a package manager.
 
 ### Alias-source installation
 
