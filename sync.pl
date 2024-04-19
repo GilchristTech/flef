@@ -1,33 +1,53 @@
 #!/usr/bin/perl
 
+use v5.38;
 use strict;
 use warnings;
+
 use File::Temp qw(tempdir);
 use File::Basename;
 
 use feature qw(say);
 
-my $installation_dir = dirname(__FILE__);
-chomp (my $whoami = `whoami`);
+sub rtrim {
+  return $_[0] =~ s/\s+$//rg;
+}
 
-my $tmp_dir;
-my $ssh_config_path;
-my $ssh_socket;
+my $installation_dir = dirname(__FILE__);
+my $whoami = rtrim `whoami`;
+
+if (! $whoami) {
+  die "Error: could not determine user. `whoami` exited with code $?";
+}
+
+
+sub flefCommandString {
+  my $flef_fh;
+  my $flef_output = open($flef_fh, "-|", "$installation_dir/flef.sh", @_, "2>&1");
+  my @output_lines = <$flef_fh>;
+  close($flef_fh);
+  return join("", @output_lines);
+}
+
 
 sub printUsage {
-  say "sync.pl [target]"
+  say "usage: sync.pl [push|pull] [target] [project]?"
 }
 
 #
 # Parse arguments
 #
 
-if (scalar @ARGV != 1) {
+my $ARGC = @ARGV;
+
+if (0 == $ARGC || $ARGC > 3) {
   printUsage;
   exit 1;
 }
 
-my $target_arg = $ARGV[0];
+my $sync_action = $ARGV[0];
+my $target_arg  = $ARGV[1];
+my $project_dir = $ARGV[2];
 
 my $target_user;
 my $target_address;
@@ -45,13 +65,34 @@ if (! $target_user) {
   $target_user = $whoami;
 }
 
+if (! $project_dir) {
+  $project_dir = rtrim flefCommandString("pwd");
+}
+
+# Get flef project path and name
+#
+my $project_name = basename "$project_dir";
+say "Project name: $project_name";
+
 my $target = "$target_user\@$target_address";
+
+if ($?) {
+  say "$project_dir";
+  exit $?;
+}
+
+# If the project directory is a symbolic link, resolve it
+#
+if (-l $project_dir) {
+  use Cwd 'abs_path';
+  $project_dir = abs_path $project_dir;
+}
 
 # Create the SSH configuration
 
-$tmp_dir         = tempdir(CLEANUP => 1);
-$ssh_config_path = "$tmp_dir/ssh-cfg";
-$ssh_socket      = "$tmp_dir/ssh-socket";
+my $tmp_dir         = tempdir(CLEANUP => 1);
+my $ssh_config_path = "$tmp_dir/ssh-cfg";
+my $ssh_socket      = "$tmp_dir/ssh-socket";
 
 open my $fh, '>', $ssh_config_path
   or die "Cannot open $ssh_config_path: $!";
@@ -75,7 +116,7 @@ system(
 ) == 0 or die "Failed to establish SSH tunnel: $!";
 
 
-sub sshCmd {
+sub sshCommand {
   my @args = @_;
 
   return system(
@@ -88,55 +129,108 @@ sub sshCmd {
 }
 
 
-sub rsyncSend {
+sub sshCommandString {
+  my $stdout;
+  open($stdout, '-|', @_);
+
+  my @output_lines = <$stdout>;
+  close($stdout);
+
+  return join("", @output_lines);
+}
+
+
+sub rsyncSendDirectory {
   my $src  = shift . "/";
   my $dest = $target.":".shift;
 
-  return system(
+  my @command = (
     "rsync",
     "--delete-after",
     "-zarP",  # compress, archive, recursive, Progress
-    "-e", "ssh -F $ssh_config_path",
+    "-e", "ssh -F \"$ssh_config_path\"",
     $src, $dest
-  ) >> 8;
+  );
+
+  say join " ", @command;
+
+  return system(@command) >> 8;
+}
+
+
+sub flefTargetHasFlef {
+  return sshCommand("(\$SHELL -ic 'type flef') 2> /dev/null 1> /dev/null") == 0;
 }
 
 
 sub flefRemoteInstall {
-  rsyncSend($installation_dir, "~/.flef");
+  my $rsync_status = rsyncSendDirectory($installation_dir, "~/.flef");
+  if ($rsync_status) { return $rsync_status };
 
   # Replace reference's to the local user's home directory with
   # references to the target's home directory
 
-  if (sshCmd("test", "-f", "~/.flef/flef.config.sh") == 0) {
+  if (sshCommand("test", "-f", "~/.flef/flef.config.sh") == 0) {
     say "Adjusting remote flef configuration";
 
     my $find    = '/home/'.$source_user.'/';
     my $replace = '/home/'.$target_user.'/';
 
-    sshCmd('sed', '-i', "s:$find:$replace:g", '~/.flef/flef.config.sh');
+    my $sed_status = sshCommand('sed', '-i', "s:$find:$replace:g", '~/.flef/flef.config.sh');
+    if ($sed_status) { return $sed_status };
   }
 
-  sshCmd("~/.flef/install.sh", "--yes");
+  return sshCommand("~/.flef/install.sh", "--yes");
 }
 
-# Check whether flef is installed on the remote target, and if not, install
-#
 
-my $type_flef = sshCmd("(\$SHELL -ic 'type flef') 2> /dev/null 1> /dev/null");
+if ($sync_action eq "push") {
+  # Check for a flef installation on the target host, and install if it's not
+  # present.
+  #
 
-if ($type_flef == 0) {
-  say "Target host and user has flef installed";
+  if (flefTargetHasFlef) {
+    say "Target host and user has flef installed";
+  }
+  else {
+    say "Target doesn't have flef";
+    flefRemoteInstall;
+  }
+
+  # Transfer project
+  #
+
+  my $remote_flef_dir = rtrim sshCommandString(
+    "(\$SHELL -ic 'flef dir') 2> /dev/null"
+  );
+
+  if ($?) {
+    my $command_status = $?;
+    die "Could not determine remote flef directory. Open status: $?. Command status: $command_status. Output:\n$remote_flef_dir";
+  }
+
+  sshCommand("mkdir", "-p", $remote_flef_dir);
+
+  my $remote_project_dir = "$remote_flef_dir/$project_name";
+
+  say "Source: $project_dir";
+  say "Sending project to: $remote_project_dir";
+  rsyncSendDirectory($project_dir, $remote_project_dir) == 0
+    or die "Could not send project to remote host";
+}
+elsif ($sync_action eq "pull") {
+  say "Pull action unimplemented";
+  exit 1;
 }
 else {
-  say "Target doesn't have flef";
-  flefRemoteInstall();
+  say "Unrecognized sync action: $sync_action";
+  printUsage;
+  exit 1;
 }
 
 
 # Cleanup: close the SSH tunnel
 #
-
 END {
   if ($ssh_socket && -f $ssh_socket) {
     system(

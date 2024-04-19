@@ -1,5 +1,6 @@
 #!/usr/bin/bash -e
 
+FLEF_INSTALLATION="$(cd "$(dirname $0)" && pwd)"
 FLEF_DIR="${FLEF_DIR:-"$HOME/flef"}"
 FLEF_DATEFORMAT="${FLEF_DATEFORMAT:-%y-%m-%d}"
 
@@ -230,6 +231,20 @@ function flef-main {
   elif [[ "$1" == "link" ]] ; then
     shift
     flef-cd "$(flef-link "$@")"
+    return $?
+
+  elif [[ "$1" == "sync" ]] ; then
+    shift
+    echo "$FLEF_INSTALLATION/sync.pl" $@  # TODO: remove this line
+    "$FLEF_INSTALLATION/sync.pl" $@
+    return $?
+
+  elif [[ "$1" == "dir" ]] ; then
+    echo "$FLEF_DIR"
+    return 0
+
+  elif [[ "$1" == "pwd" ]] ; then
+    flef-get-project-path "$(pwd)";
     return $?
 
   elif [[ $1 ]] ; then
