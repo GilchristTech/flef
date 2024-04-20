@@ -1,4 +1,13 @@
-#!/bin/bash -e
+#!/bin/bash
+
+set -eE -o functrace
+
+function failure {
+  local line_number=$1
+  local message=$2
+  echo "Failed at line $line_number: $message"
+}
+trap 'failure ${LINENO} "$BASH_COMMAND"' ERR
 
 # If HOME is not set, figure it out by expanding ~/
 HOME="${HOME:-"$(bash -c 'echo ~/')"}"
@@ -22,9 +31,12 @@ if [[ -z "$flef_config_file" ]]; then
   flef_config_file="${flef_installation_dir}/flef.config.sh"
 fi
 
-echo -n "Configuration file detected at $flef_config_file. Load settings from the existing configuration? [Yn]"
-if yes-or-no ; then
-  source "$flef_config_file"
+if [[ -f "$flef_config_file" ]] ; then
+  echo -n "Configuration file detected at $flef_config_file. Load settings from the existing configuration? [Yn]"
+
+  if yes-or-no ; then
+    source "$flef_config_file"
+  fi
 fi
 
 #
@@ -109,7 +121,7 @@ function flef-generate-config {
 # Look for an existing flef configuration, or generate
 # the contents for one
 
-flef_config_content="$(cat "$flef_config_file")"
+flef_config_content="$(test ! -f "$flef_config_file" || cat "$flef_config_file")"
 if [[ -f "$flef_config_file" ]] ; then
   echo "Found existing flef configuration at ${flef_config_file}"
   echo -n "Overwrite with new settings? [Yn] "
