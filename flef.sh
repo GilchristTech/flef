@@ -1,6 +1,17 @@
 #!/usr/bin/bash -e
 
-FLEF_INSTALLATION="$(cd "$(dirname $0)" && pwd)"
+FLEF_INSTALLATION="${FLEF_INSTALLATION:-""}"
+if [[ "$BASH_SOURCE" ]] ; then
+  FLEF_INSTALLATION="$(cd "$(dirname "$BASH_SOURCE")" && pwd)"
+elif [[ "$0" ]] ; then
+  FLEF_INSTALLATION="$(cd "$(dirname $0)" && pwd)"
+elif [[ -z "$FLEF_INSTALLATION" ]] ; then
+  echo "error: Could not determine flef installation directory"
+  if [[ ! "$FLEF_USE_SOURCE" ]] ; then
+    exit 1
+  fi
+fi
+
 FLEF_DIR="${FLEF_DIR:-"$HOME/flef"}"
 FLEF_DATEFORMAT="${FLEF_DATEFORMAT:-%y-%m-%d}"
 
@@ -25,6 +36,26 @@ EOF
 
 function flef-usage {
   echo "$FLEF_USAGE"
+}
+
+
+function flef-get {
+  # Gets flef-related information
+  
+  case $1 in
+    installation)
+      echo $FLEF_INSTALLATION ;;
+    dir)
+      echo $FLEF_DIR ;;
+    pwd)
+      flef-get-project-path "$(pwd)"; return $? ;;
+    last)
+      shift
+      flef-find-last $@
+      return $? ;;
+    *)
+      return 1;
+  esac
 }
 
 
@@ -107,7 +138,7 @@ function flef-cd {
   # If the project directory doesn't exist, create it
 
   if [[ ! ( -d "$project_dir" || -L "$project_dir") ]] ; then
-    mkdir "$project_dir"
+    mkdir -p "$project_dir"
   fi
 
   if [ ! $FLEF_USE_SOURCE ] ; then
@@ -195,8 +226,8 @@ function flef-link {
 function flef-main {
   # Create the flef directory if it does not exist
 
-  if [[ ! ( -d "${FLEF_DIR}" ) ]] ; then
-    mkdir "${FLEF_DIR}"
+  if [[ ! ( -d "${FLEF_DIR}" || -L "${FLEF_DIR}" ) ]] ; then
+    mkdir -p "${FLEF_DIR}"
   fi
 
   if [[ "$1" == 'help' ]]; then
@@ -235,16 +266,12 @@ function flef-main {
 
   elif [[ "$1" == "sync" ]] ; then
     shift
-    echo "$FLEF_INSTALLATION/sync.pl" $@  # TODO: remove this line
     "$FLEF_INSTALLATION/sync.pl" $@
     return $?
 
-  elif [[ "$1" == "dir" ]] ; then
-    echo "$FLEF_DIR"
-    return 0
-
-  elif [[ "$1" == "pwd" ]] ; then
-    flef-get-project-path "$(pwd)";
+  elif [[ "$1" == "get" ]] ; then
+    shift
+    flef-get $@
     return $?
 
   elif [[ $1 ]] ; then
