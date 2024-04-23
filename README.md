@@ -9,7 +9,7 @@
 
 `flef` is a small convenience utility for creating and
 navigating to single-day project directories without needing
-to type dates in their names.  Invoking `flef` ensures the
+to type dates in their names. Invoking `flef` ensures the
 existence of a project directory, named with the current
 date, and starts a shell there; creating a clean
 environment and helping facilitate a habit of daily coding.
@@ -72,12 +72,13 @@ cd ~/.flef/
 ./install.sh
 ```
 
-\* The sync features are written in Perl, and so Perl is
-an optional dependency. Perl was chosen because it comes
-installed on the vast majority of \*nix systems, and is
-unlikely require any additional setup, allowing the sync
-functionality to install `flef` for a user on another
-machine over SSH without touching a package manager.
+\* The sync features are written in Perl, and also uses SSH
+and `rsync`. These are all dependencies if the sync features
+are used. Perl was chosen because it comes installed on the
+vast majority of \*nix systems, and is unlikely require any
+additional setup, allowing the sync functionality to install
+`flef` for a user on another machine over SSH without
+touching a package manager.
 
 ### Alias-source installation
 
@@ -174,6 +175,66 @@ $ flef link
 $ flef link new-name
 $ flef link new-name ./other-directory/
 ```
+
+## Sync: Transfer projects between machines
+
+To move projects between computers, `flef`'s sync features
+can be used. These sync commands make it easy to, for
+example, transfer in-progress code to-and-from one's desktop
+and laptop computers on a local network. These features are
+two subcommands: push and pull, which send a `flef` project
+from one computer to another.
+
+Flef's sync features require SSH and rsync on both machines,
+and requires the remote machine to .
+For composing the host addresses used in the sync commands,
+it tends to be easiest to use a zeroconf networking
+implementation such as Avahi instead of typing IP addresses
+on your local network. Installing and configuring these
+technologies may vary among systems, and is beyond the scope
+of this README. 
+
+### Sync usage
+
+The examples below use a host called `laptop.local`, which
+assumes a host on the local network being defined using
+zeroconf. An IP address can also be used.
+
+To send the project in the current working directory to your
+laptop at `laptop.local` (if it's a `flef` project), type:
+
+```bash
+flef sync push laptop.local
+```
+
+And then, if you're in that same directory, you can download
+it back with:
+```bash
+flef sync pull laptop.local
+```
+
+By default, the push and pull commands attempt to use `flef`
+project in the current directory, or its parents. However,
+an additional argument can specify a project name, or a last
+Nth project:
+
+```bash
+flef sync pull laptop.local last 2
+flef sync push laptop.local 2024-04-23_my-project
+```
+
+In all the above commands, `rsync` commands with the paths
+to the projects are generated.
+
+### Remote installation
+
+When pushing a project to another machine and user, if
+`flef` is not installed for that user, it will attempt to
+install `flef` for them, using the same settings as the
+local system. This is so that `flef` can later be used to
+query the project directory, and also so that a developer
+can carry on where they left off.
+
 
 ## Environment Variable Configuration
 
