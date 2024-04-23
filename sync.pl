@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use v5.38;
+use v5.32;
 use feature qw(say);
 
 use File::Basename;
@@ -30,14 +30,21 @@ sub printUsage {
 
 my $ARGC = @ARGV;
 
-if (0 == $ARGC || $ARGC > 3) {
-  printUsage;
+if (0 == $ARGC) {
+  printUsage();
   exit 1;
 }
 
-my $sync_action = $ARGV[0];
-my $target_arg  = $ARGV[1];
-my $project_dir = $ARGV[2];
+my $sync_action  = $ARGV[0];
+my $target_arg   = $ARGV[1];
+my $project_dir  = $ARGV[2];
+my @command_args = @ARGV[2..$#ARGV];
+
+if (! $target_arg) {
+  say "error: SSH target not defined in arguments";
+  printUsage();
+  exit 1;
+}
 
 my ($target_user, $target_address, $target) = Flef::Remote::sshParseDestination($target_arg);
 
@@ -47,29 +54,30 @@ if (! $target_user) {
   $target_user = $whoami;
 }
 
-if (! $project_dir) {
-  $project_dir = rtrim Flef::commandString("get", "pwd");
-}
 
-# Get flef project path and name
-#
-my $project_name = basename "$project_dir";
-say "Project name: $project_name";
+sub flefSyncPush {
+  my @command_args = @_;
+  if (! $project_dir) {
+    $project_dir = rtrim Flef::commandString("get", "pwd");
+  }
 
-if ($?) {
-  say "$project_dir";
-  exit $?;
-}
+  # Get flef project path and name
+  #
+  my $project_name = basename "$project_dir";
+  say "Project name: $project_name";
 
-# If the project directory is a symbolic link, resolve it
-#
-if (-l $project_dir) {
-  use Cwd 'abs_path';
-  $project_dir = abs_path $project_dir;
-}
+  if ($?) {
+    say "$project_dir";
+    exit $?;
+  }
 
+  # If the project directory is a symbolic link, resolve it
+  #
+  if (-l $project_dir) {
+    use Cwd 'abs_path';
+    $project_dir = abs_path $project_dir;
+  }
 
-if ($sync_action eq "push") {
   # Check for a flef installation on the target host, and install if it's not
   # present.
 
@@ -86,18 +94,15 @@ if ($sync_action eq "push") {
   # Transfer project
   #
 
-  my $remote_flef_dir = rtrim Flef::Remote::sshCommandString(
-    "(\$SHELL -ic 'flef get dir') 2> /dev/null"
-  );
+  my $remote_flef_dir = rtrim Flef::Remote::flefCommandString(qw/get dir/);
 
   if ($?) {
-    my $command_status = $?;
+    my $command_status = $? >> 8;
     die "Could not determine remote flef directory. Open status: $?. Command status: $command_status. Output:\n$remote_flef_dir";
   }
 
   say "Remote dir: $remote_flef_dir";
   Flef::Remote::sshCommand("mkdir", "-p", $remote_flef_dir);
-  exit;
 
   if (Flef::Remote::sshCommand("test", "-d", $remote_flef_dir)) {
     die "Remote flef projects directory does not exist: $remote_flef_dir";
@@ -110,10 +115,72 @@ if ($sync_action eq "push") {
   Flef::Remote::rsyncSendDirectory($project_dir, $remote_project_dir) == 0
     or die "Could not send project to remote host";
 }
-elsif ($sync_action eq "pull") {
+
+
+sub flefSyncPull {
+  my @command_args = @_;
+
+  # Initialize SSH and ensure flef is ready on the remote system
+  #
   Flef::Remote::sshInit($target_user, $target_address);
-  say "Pull action currently unimplemented";
-  exit 1;
+
+  if (! Flef::Remote::hasFlef()) {
+    say "Target doesn't have flef, cannot pull";
+    exit 1;
+  }
+
+  my $flef_dir = rtrim Flef::commandString("get", "dir");
+  if ($? || ! $flef_dir) {
+    say "error: Cannot determine flef projects directory";
+    exit ($? || 1);
+  }
+
+  # Parse args and figure out which directory to pull
+  #
+  my $remote_project_dir;
+  my $local_project_dir;
+  my $project_name;
+
+  if (scalar @command_args == 0) {
+    if ($project_dir) {
+      $local_project_dir = rtrim Flef::commandString("get", "pwd");
+      $project_name      = basename $local_project_dir;
+    }
+    else {
+      say "Getting last flef project";
+      @command_args = qw/last 1/;
+    }
+  }
+
+  if ($command_args[0] eq "last") {
+    $remote_project_dir = rtrim Flef::Remote::flefCommandString("get", @command_args);
+    $project_name = basename $remote_project_dir;
+    $local_project_dir = "$flef_dir/$project_name";
+
+    if ($? || ! $remote_project_dir) {
+      my $remote_get_code = $? >> 8;
+      say "error: Could not get flef remote flef project. Exit code $remote_get_code. Output:\n$remote_project_dir";
+      exit ($? || 1);
+    }
+  }
+
+  if (! $project_name) {
+    say "error: could not determine project name";
+    exit 1;
+  }
+
+  say "Remote project name: $project_name";
+  
+  Flef::Remote::rsyncDownloadDirectory($remote_project_dir, $local_project_dir);
+
+  exit 0;
+}
+
+
+if ($sync_action eq "push") {
+  flefSyncPush(@command_args);
+} elsif ($sync_action eq "pull") {
+  flefSyncPull(@command_args);
 }
 else {
   say "Unrecognized sync action: $sync_action";

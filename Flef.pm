@@ -17,7 +17,7 @@ if ($? != 0 || ! $installation_dir) {
 
 sub commandString {
   my $flef_fh;
-  my $flef_output = open($flef_fh, "-|", "$installation_dir/flef.sh", @_, "2>&1");
+  my $flef_output = open($flef_fh, "-|", "$installation_dir/flef.sh", @_);
   my @output_lines = <$flef_fh>;
   close($flef_fh);
   return join("", @output_lines);

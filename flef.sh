@@ -12,6 +12,16 @@ elif [[ -z "$FLEF_INSTALLATION" ]] ; then
   fi
 fi
 
+# If flef does not use source, assume its configuration is not loaded, and
+# attempt to find and load it.
+#
+if [[ -z "$FLEF_USE_SOURCE" ]] ; then
+  flef_config_path="$FLEF_INSTALLATION/flef.config.sh"
+  if [[ -f "$flef_config_path" ]] ; then
+    source "$flef_config_path"
+  fi
+fi
+
 FLEF_DIR="${FLEF_DIR:-"$HOME/flef"}"
 FLEF_DATEFORMAT="${FLEF_DATEFORMAT:-%y-%m-%d}"
 
@@ -29,6 +39,13 @@ Usage: flef [project_name|last [n]|help]
   link [name?] [dir?] Create a flef project as a symbolic link to another
                       directory, with an optional name. If no arguments are
                       specified, the current directory and its name are used.
+
+  sync [push|pull]    Uploads/downloads projects to remote hosts with SSH and
+                      rsync
+
+  get [item]          Gets flef-related data and configuration as strings.
+                      Available items: installation, dir, pwd, last [n?]
+
   help                Show this usage outline
 EOF
 )
@@ -72,15 +89,11 @@ function flef-find {
 function flef-find-last {
   # Find the last modified flef directory
 
-  local last_offset="$1"
+  local last_offset="${1:-"1"}"
 
-  if [ $last_offset  ] ; then
-    if [[ ! $last_offset =~ ^[0-9]+$ ]] ; then
-      echo "error: command 'flef last [number]' expects number to be a positive integer"
-      return 1
-    fi
-  else
-    last_offset=1
+  if [[ ! $last_offset =~ ^[0-9]+$ ]] ; then
+    echo "error: command 'flef last [number]' expects number to be a positive integer"
+    return 1
   fi
 
   local recent_project_dir=$(
@@ -248,6 +261,7 @@ function flef-main {
     last_project_status=$?
 
     if [[ $last_project_status -ne 0 ]] ; then
+      echo "[flef-find-last] $last_project_dir"
       echo "[flef-main] error: Could not find last project directory"
       return $last_project_status
     fi

@@ -1,4 +1,4 @@
-use v5.38;
+use v5.32;
 package Flef::Remote;
 
 use File::Temp qw(tempdir);
@@ -98,8 +98,17 @@ sub sshCommand {
 
 
 sub sshCommandString {
+  my @args = @_;
+
   my $stdout;
-  open($stdout, '-|', @_);
+  open(
+    $stdout, "-|",
+    "ssh",
+    "-F", $ssh_config_path,
+    "-l", $ssh_user,
+    $ssh_address,
+    @_
+  );
 
   my @output_lines = <$stdout>;
   close($stdout);
@@ -108,9 +117,30 @@ sub sshCommandString {
 }
 
 
+sub flefCommandString {
+  return sshCommandString("/home/$ssh_user/.flef/flef.sh", @_);
+}
+
+
 sub rsyncSendDirectory {
   my $src  = shift . "/";
   my $dest = "$ssh_destination:".shift;
+
+  my @command = (
+    "rsync",
+    "--delete-after",
+    "-zarP",  # compress, archive, recursive, Progress
+    "-e", "ssh -F \"$ssh_config_path\"",
+    $src, $dest
+  );
+
+  return system(@command) >> 8;
+}
+
+
+sub rsyncDownloadDirectory {
+  my $src  = "$ssh_destination:".shift . "/";
+  my $dest = shift;
 
   my @command = (
     "rsync",
