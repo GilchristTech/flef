@@ -60,18 +60,11 @@ function flef-get {
   # Gets flef-related information
   
   case $1 in
-    installation)
-      echo $FLEF_INSTALLATION ;;
-    dir)
-      echo $FLEF_DIR ;;
-    pwd)
-      flef-get-project-path "$(pwd)"; return $? ;;
-    last)
-      shift
-      flef-find-last $@
-      return $? ;;
-    *)
-      return 1;
+    installation) echo $FLEF_INSTALLATION        ; test ! -z "$FLEF_INSTALLATION" ;;
+    dir)          echo $FLEF_DIR                 ; test ! -z "$FLEF_DIR"          ;;
+    pwd)          flef-get-project-path "$(pwd)" ; return $?                      ;;
+    last)         shift ; flef-find-last $@      ; return $?                      ;;
+    *)            return 1 ;;
   esac
 }
 
@@ -243,71 +236,58 @@ function flef-main {
     mkdir -p "${FLEF_DIR}"
   fi
 
-  if [[ "$1" == 'help' ]]; then
-    flef-usage
-    return $?
+  case "$1" in
+    help) flef-usage                              ; return $? ;;
+    rm)   flef-rm                                 ; return $? ;;
+    link) shift ; flef-cd "$(flef-link "$@")"     ; return $? ;;
+    sync) shift ; "$FLEF_INSTALLATION/sync.pl" $@ ; return $? ;;
+    get)  shift ; flef-get $@                     ; return $? ;;
 
-  elif [[ "$1" == 'last' ]] ; then
-    shift
+    last)
+      shift
 
-    # Find last project directory
-    #
-    # do not assign here, in order to capture status:
-    #   https://stackoverflow.com/a/50494835
-    #
-    local last_project_dir
-    local last_project_status
-    last_project_dir="$(flef-find-last $@)"
-    last_project_status=$?
+      # Find last project directory
+      #
+      # do not assign here, in order to capture status:
+      #   https://stackoverflow.com/a/50494835
+      #
+      local last_project_dir
+      local last_project_status
+      last_project_dir="$(flef-find-last $@)"
+      last_project_status=$?
 
-    if [[ $last_project_status -ne 0 ]] ; then
-      echo "[flef-find-last] $last_project_dir"
-      echo "[flef-main] error: Could not find last project directory"
-      return $last_project_status
-    fi
+      if [[ $last_project_status -ne 0 ]] ; then
+        echo "[flef-find-last] $last_project_dir"
+        echo "[flef-main] error: Could not find last project directory"
+        return $last_project_status
+      fi
 
-    flef-cd "${last_project_dir}"
-    return $?
-
-  elif [[ "$1" == 'rm' ]] ; then
-    flef-rm
-    return $?
-
-  elif [[ "$1" == "link" ]] ; then
-    shift
-    flef-cd "$(flef-link "$@")"
-    return $?
-
-  elif [[ "$1" == "sync" ]] ; then
-    shift
-    "$FLEF_INSTALLATION/sync.pl" $@
-    return $?
-
-  elif [[ "$1" == "get" ]] ; then
-    shift
-    flef-get $@
-    return $?
-
-  elif [[ $1 ]] ; then
-    # Use a flef directory with a given name, creating it if needed
-    flef-cd "${FLEF_DIR}/$(flef-date)_${1}"
-
-  else
-    # Enters the most recently modified flef directory with the current date,
-    # and if not found, creates a new one.
-
-    local today_project_dir=$(
-      flef-find -name "$(flef-date)*" | sort -n | tail -n 1 | cut -f2
-    )
-
-    if [[ -z "$today_project_dir" ]] ; then
-      flef-cd "${FLEF_DIR}/$(flef-date)"
+      flef-cd "${last_project_dir}"
       return $?
-    fi
+      ;;
 
-    flef-cd "${today_project_dir}"
-    return $?
-  fi
+    '')
+      # Enters the most recently modified flef directory with the current date,
+      # and if not found, creates a new one.
+
+      local today_project_dir=$(
+        flef-find -name "$(flef-date)*" | sort -n | tail -n 1 | cut -f2
+      )
+
+      if [[ -z "$today_project_dir" ]] ; then
+        flef-cd "${FLEF_DIR}/$(flef-date)"
+        return $?
+      fi
+
+      flef-cd "${today_project_dir}"
+      return $?
+      ;;
+
+    *)
+      # Use a flef directory with a given name, creating it if needed
+      flef-cd "${FLEF_DIR}/$(flef-date)_${1}"
+      ;;
+  esac
 }
 
 flef-main $@
