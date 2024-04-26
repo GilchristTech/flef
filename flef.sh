@@ -44,26 +44,56 @@ Usage: flef [project_name|last [n]|help]
                       rsync
 
   get [item]          Gets flef-related data and configuration as strings.
-                      Available items: installation, dir, pwd, last [n?]
+                      Available items:
+                        installation, dir, pwd, last [n?], date,
+                        project, project-name
 
   help                Show this usage outline
 EOF
 )
 
 
-function flef-usage {
-  echo "$FLEF_USAGE"
-}
-
-
 function flef-get {
   # Gets flef-related information
   
   case $1 in
-    installation) echo $FLEF_INSTALLATION        ; test ! -z "$FLEF_INSTALLATION" ;;
-    dir)          echo $FLEF_DIR                 ; test ! -z "$FLEF_DIR"          ;;
-    pwd)          flef-get-project-path "$(pwd)" ; return $?                      ;;
-    last)         shift ; flef-find-last $@      ; return $?                      ;;
+    installation) echo $FLEF_INSTALLATION     ; test ! -z "$FLEF_INSTALLATION" ;;
+    dir)          echo $FLEF_DIR              ; test ! -z "$FLEF_DIR"          ;;
+    last)         shift ; flef-find-last $@   ; return $?                      ;;
+    date)         date +"${FLEF_DATEFORMAT}"  ; return $?                      ;;
+    pwd)          flef-get project "$(pwd)"   ; return $?                      ;;
+
+    project)
+      shift
+      # Given the directory at $1, print the root of the flef project directory
+      local project_path="$(cd "$2" && pwd)"
+      local abs_flef_dir="$(cd "$FLEF_DIR" && pwd)"
+
+      if [[ ! "$project_path" = "$abs_flef_dir"/* ]] ; then
+        >&2 echo "error: Directory is not a flef project directory"
+        return 1
+      fi
+
+      echo "${FLEF_DIR}/$(flef-main get project-name "$2")"
+      ;;
+
+    project-name)
+      # Given a path at $2, return the name of the project,
+      # based off the intersection of that path and $FLEF_DIR.
+      # This function does not process symbolic links.
+
+      local project_path="$(cd "$2" && pwd)"
+      local abs_flef_dir="$(cd "$FLEF_DIR" && pwd)"
+
+      if [[ ! "$project_path" = "$abs_flef_dir"/* ]] ; then
+        >&2 echo "error: Directory is not a flef project directory"
+        return 1
+      fi
+
+      echo "$project_path" | tail -c "+$(echo "${FLEF_DIR}" | wc -c)" | cut -d/ -f2
+      return 0
+      ;;
+
     *)            return 1 ;;
   esac
 }
@@ -98,38 +128,6 @@ function flef-find-last {
   fi
 
   echo "${recent_project_dir}"
-}
-
-
-function flef-date {
-  date +"${FLEF_DATEFORMAT}"
-}
-
-
-function flef-get-project-name {
-  # Given a path at $1, return the name of the project,
-  # based off the intersection of that path and $FLEF_DIR.
-  # This function does not process symbolic links.
-
-  if [[ ! $1 = "$FLEF_DIR"/* ]] ; then
-    >&2 echo "error: Directory is not a flef project directory"
-    return 1
-  fi
-
-  echo "$1" | tail -c "+$(echo "${FLEF_DIR}" | wc -c)" | cut -d/ -f2
-  return 0
-}
-
-
-function flef-get-project-path {
-  # Given the directory at $1, print the root of the flef project directory
-
-  if [[ ! "$1" = "$FLEF_DIR"/* ]] ; then
-    >&2 echo "error: Directory is not a flef project directory"
-    return 1
-  fi
-
-  echo "${FLEF_DIR}/$(flef-get-project-name "$1")"
 }
 
 
@@ -189,7 +187,7 @@ function flef-cd {
 function flef-rm {
   PROJECT_RM_CONFIRM="${PROJECT_RM_CONFIRM:-1}"
 
-  PROJECT_PATH=$(flef-get-project-path "${PWD}")
+  PROJECT_PATH=$(flef-main get pwd)
   PROJECT_PATH_STATUS=$?
 
   if [ $PROJECT_PATH_STATUS != 0 ] ; then
@@ -222,7 +220,7 @@ function flef-rm {
 function flef-link {
   local source_dir="${2:-"$(pwd)"}"
   local project_name="${1:-"$(basename "$source_dir")"}"
-  local project_dir="${FLEF_DIR}/$(flef-date)_${project_name}"
+  local project_dir="${FLEF_DIR}/$(flef-main get date)_${project_name}"
 
   ln -s "${source_dir}" "${project_dir}"
   echo "$project_dir"
@@ -237,17 +235,16 @@ function flef-main {
   fi
 
   case "$1" in
-    help) flef-usage                              ; return $? ;;
+    help) echo "$FLEF_USAGE"                      ; return  1 ;;
     rm)   flef-rm                                 ; return $? ;;
     link) shift ; flef-cd "$(flef-link "$@")"     ; return $? ;;
     sync) shift ; "$FLEF_INSTALLATION/sync.pl" $@ ; return $? ;;
     get)  shift ; flef-get $@                     ; return $? ;;
 
     last)
+      # Find last project directory
       shift
 
-      # Find last project directory
-      #
       # do not assign here, in order to capture status:
       #   https://stackoverflow.com/a/50494835
       #
@@ -271,11 +268,11 @@ function flef-main {
       # and if not found, creates a new one.
 
       local today_project_dir=$(
-        flef-find -name "$(flef-date)*" | sort -n | tail -n 1 | cut -f2
+        flef-find -name "$(flef-get date)*" | sort -n | tail -n 1 | cut -f2
       )
 
       if [[ -z "$today_project_dir" ]] ; then
-        flef-cd "${FLEF_DIR}/$(flef-date)"
+        flef-cd "${FLEF_DIR}/$(flef-get date)"
         return $?
       fi
 
@@ -285,7 +282,7 @@ function flef-main {
 
     *)
       # Use a flef directory with a given name, creating it if needed
-      flef-cd "${FLEF_DIR}/$(flef-date)_${1}"
+      flef-cd "${FLEF_DIR}/$(flef-get date)_${1}"
       ;;
   esac
 }
