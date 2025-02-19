@@ -32,35 +32,8 @@ FLEF_DIR="${FLEF_DIR:-"$HOME/flef"}"
 FLEF_DATEFORMAT="${FLEF_DATEFORMAT:-%y-%m-%d}"
 
 
-FLEF_USAGE=$(cat <<EOF
-Usage: flef [project_name|last [n]|help]
-  no arguments        Go to the last project from today, or create a new one
-
-  project_name        Create a project directory with the provided name
-                      (e.g., flef my-project)
-
-  last [n]            Move into the last modified flef directory, optionally
-                      selecting the Nth most recent directory
-
-  link [name?] [dir?] Create a flef project as a symbolic link to another
-                      directory, with an optional name. If no arguments are
-                      specified, the current directory and its name are used.
-
-  sync [push|pull]    Uploads/downloads projects to remote hosts with SSH and
-                      rsync
-
-  get [item]          Gets flef-related data and configuration as strings.
-                      Available items:
-                        installation, dir, pwd, last [n?], date,
-                        project, project-name
-
-  help                Show this usage outline
-EOF
-)
-
-
 function flef_usage () {
-  echo "$FLEF_USAGE"
+  cat "$FLEF_INSTALLATION/usage.txt"
 }
 
 
@@ -286,7 +259,7 @@ function flef_main {
   fi
 
   case "$1" in
-    help) echo "$FLEF_USAGE"                      ; return  1 ;;
+    help) flef_usage                              ; return    ;;
     rm)   flef_rm                                 ; return $? ;;
     link) shift ; flef_cd "$(flef_link "$@")"     ; return $? ;;
     sync) shift ; "$FLEF_INSTALLATION/sync.pl" $@ ; return $? ;;
