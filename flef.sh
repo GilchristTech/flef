@@ -32,11 +32,6 @@ FLEF_DIR="${FLEF_DIR:-"$HOME/flef"}"
 FLEF_DATEFORMAT="${FLEF_DATEFORMAT:-%y-%m-%d}"
 
 
-function flef_usage () {
-  cat "$FLEF_INSTALLATION/usage.txt"
-}
-
-
 function flef_get {
   # Gets flef-related information
   
@@ -78,7 +73,8 @@ function flef_get {
       return 0
       ;;
 
-    *)            return 1 ;;
+    *)
+      return 1 ;;
   esac
 }
 
@@ -119,11 +115,6 @@ function flef_find_last {
   fi
 
   echo "${recent_project_dir}"
-}
-
-
-function flef_date {
-  date +"${FLEF_DATEFORMAT}"
 }
 
 
@@ -259,7 +250,7 @@ function flef_main {
   fi
 
   case "$1" in
-    help) flef_usage                              ; return    ;;
+    help) cat "$FLEF_INSTALLATION/usage.txt"      ; return    ;;
     rm)   flef_rm                                 ; return $? ;;
     link) shift ; flef_cd "$(flef_link "$@")"     ; return $? ;;
     sync) shift ; "$FLEF_INSTALLATION/sync.pl" $@ ; return $? ;;
@@ -311,4 +302,24 @@ function flef_main {
   esac
 }
 
-flef_main $@
+if [[ ! "$FLEF_USE_SOURCE" ]] ; then
+  flef_main $@
+  exit $?
+else
+  flef_main $@
+
+  # When using source mode, flef's internal function definitions
+  # bleed into the user's shell. Without unsetting them, if the
+  # user types "flef" and hits tab to auto-complete, all of the
+  # functions below will appear.
+  #
+  unset -f flef_main;
+  unset -f flef_find;
+  unset -f flef_find_last;
+  unset -f flef_get;
+  unset -f flef_get_project_path;
+  unset -f flef_get_project_name;
+  unset -f flef_link;
+  unset -f flef_rm;
+  unset -f flef_cd;
+fi
