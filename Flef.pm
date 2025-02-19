@@ -1,4 +1,3 @@
-use v5.38;
 package Flef;
 
 use File::Basename;

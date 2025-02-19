@@ -1,6 +1,5 @@
 #!/usr/bin/perl
 
-use v5.32;
 use feature qw(say);
 
 use File::Basename;

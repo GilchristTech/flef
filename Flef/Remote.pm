@@ -1,6 +1,6 @@
-use v5.32;
 package Flef::Remote;
 
+use feature qw(say);
 use File::Temp qw(tempdir);
 use Flef;
 
@@ -54,6 +54,7 @@ sub sshInit {
   $ssh_user        = shift;
   $ssh_address     = shift;
   $ssh_destination = $ssh_user.'@'.$ssh_address;
+  say "$ssh_destination";
 
   # Create the SSH configuration
 
@@ -70,6 +71,9 @@ Host *
   ControlPath $ssh_socket
 END_CFG
   close $fh;
+
+  system("chmod", "600", $ssh_config_path) == 0
+    or die "Could not set SSH config permissions: $!";
 
   # Establish SSH tunnel
 

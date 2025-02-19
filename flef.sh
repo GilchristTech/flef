@@ -101,7 +101,7 @@ function flef_get {
         return 1
       fi
 
-      echo "$project_path" | tail -c "+$(echo "${FLEF_DIR}" | wc -c)" | cut -d/ -f2
+      echo "$project_path" | tail -c "+$(echo "${FLEF_DIR}" | wc -c | tr -d '[:space:]')" | cut -d/ -f2
       return 0
       ;;
 
@@ -138,7 +138,7 @@ function flef_find_last {
   fi
 
   local recent_project_dir=$(
-    flef_find | sort -n | tail -n $last_offset | head -n 1 | cut -f2
+    flef_find | sort -n | tail -n "$(echo "$last_offset" | tr -d '[:space:]')" | head -n 1 | cut -f2
   )
 
   if [[ -z $recent_project_dir ]] ; then

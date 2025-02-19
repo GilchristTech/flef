@@ -1,5 +1,5 @@
 # Vim swap files
-.swo
-.swp
+*.swo
+*.swp
 
 flef.config.sh
