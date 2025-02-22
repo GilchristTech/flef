@@ -1,22 +1,34 @@
 #!/bin/bash -e
 
-# Main entry-point for flef in the shell. This script must be able to be ran
+# Main entrypoint for flef in the shell. This script must be able to be ran
 # normally, or sourced into the terminal. By sourcing this script into the
 # terminal, it can change the directory of the shell's current working
 # directory. This gets around a limitation in shells which prevents the main
 # functionality of flef.
 
 FLEF_INSTALLATION="${FLEF_INSTALLATION:-""}"
+FLEF_EXEC_PATH=
+
 if [[ "$BASH_SOURCE" ]] ; then
-  FLEF_INSTALLATION="$(cd "$(dirname "$BASH_SOURCE")" && pwd)"
+  FLEF_EXEC_PATH="$BASH_SOURCE"
 elif [[ "$0" ]] ; then
-  FLEF_INSTALLATION="$(cd "$(dirname $0)" && pwd)"
+  FLEF_EXEC_PATH="$0"
 elif [[ -z "$FLEF_INSTALLATION" ]] ; then
   echo "error: Could not determine flef installation directory"
   if [[ ! "$FLEF_USE_SOURCE" ]] ; then
     exit 1
   fi
 fi
+
+# If this script is being executed from a symbolic link, get its
+# actual path to determine the flef installation directory.
+#
+if [ -L "$FLEF_EXEC_PATH" ] ; then
+  FLEF_EXEC_PATH="$(readlink "$FLEF_EXEC_PATH")"
+fi
+
+FLEF_INSTALLATION="$(dirname "$FLEF_EXEC_PATH")"
+
 
 # If flef does not use source, assume its configuration is not loaded, and
 # attempt to find and load it.
@@ -30,13 +42,21 @@ fi
 
 # Load flef settings
 
-declare -A flef_settings
+flef_settings_raw=$(bash "$FLEF_INSTALLATION/eval-settings.sh" | grep '^__FLEF_SETTING__' | cut -f2-)
 
-"$FLEF_INSTALLATION/eval-settings.sh" \ | cut -f2- \
-| while IFS=$'\t' read -r key value
-do
-  flef_settings["$key"]="$value"
-done
+function flef_get_setting {
+  local setting_name=$1
+
+  echo "${flef_settings_raw}" | while IFS=$'\t' read -r key value ; do
+    if [ "$key" = "$setting_name" ]; then
+      echo "$value"
+      test ! -z "$value"
+      return $?
+    fi
+  done
+
+  return 1
+}
 
 
 function flef_get {
@@ -44,19 +64,13 @@ function flef_get {
   
   case $1 in
     installation) echo $FLEF_INSTALLATION     ; test ! -z "$FLEF_INSTALLATION" ;;
-    dir)          flef_get setting 'FLEF_DIR' ; return $?                      ;;
+    dir)          flef_get_setting 'FLEF_DIR' ; return $?                      ;;
     last)         shift ; flef_find_last $@   ; return $?                      ;;
     pwd)          flef_get project "$(pwd)"   ; return $?                      ;;
+    setting)      shift ; flef_get_setting $1 ; return $?                      ;;
 
     date)
-      date +"$(flef_get setting FLEF_DATEFORMAT)"
-      return $?
-      ;;
-
-    setting) shift
-      local value="${flef_settings["$1"]}"
-      echo "$value"
-      test ! -z "$value"
+      date +"$(flef_get_setting FLEF_DATEFORMAT)"
       return $?
       ;;
 
@@ -273,6 +287,11 @@ function flef_main {
   # Create the flef directory if it does not exist
 
   local flef_dir="$(flef_get dir)"
+
+  if [[ $? != 0 ]] || [[ -z "$flef_dir" ]]; then
+    echo "Error, could not determine FLEF_DIR"
+    return 1
+  fi
 
   if [[ ! ( -d "${flef_dir}" || -L "${flef_dir}" ) ]] ; then
     echo "Creating flef directory in $flef_dir"
