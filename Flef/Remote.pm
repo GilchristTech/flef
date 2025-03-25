@@ -12,6 +12,8 @@ our $ssh_user;
 our $ssh_address;
 our $ssh_destination;
 
+our $ssh_home;
+
 chomp(my $whoami = `whoami`);
 
 
@@ -85,6 +87,13 @@ END_CFG
     "-l", $ssh_user,
     $ssh_address
   ) == 0 or die "Failed to establish SSH tunnel: $!";
+
+  $ssh_home = sshCommandString(qw/bash -c 'cd && pwd'/);
+  chomp $ssh_home;
+
+  if (! $ssh_home) {
+    die "Could not determine user home directory";
+  }
 }
 
 
@@ -122,7 +131,7 @@ sub sshCommandString {
 
 
 sub flefCommandString {
-  return sshCommandString("/home/$ssh_user/.flef/flef.sh", @_);
+  return sshCommandString("$ssh_home/.flef/flef.sh", @_);
 }
 
 
@@ -207,6 +216,7 @@ sub sshClose {
   $ssh_socket      = undef;
   $ssh_user        = undef;
   $ssh_address     = undef;
+  $ssh_home        = undef;
   return 0;
 }
 

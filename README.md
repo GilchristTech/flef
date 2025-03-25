@@ -75,7 +75,7 @@ cd ~/.flef/
 \* The sync features are written in Perl, and also uses SSH
 and `rsync`. These are all dependencies if the sync features
 are used. Perl was chosen because it comes installed on the
-vast majority of \*nix systems, and is unlikely require any
+vast majority of \*nix systems, and is unlikely to require any
 additional setup, allowing the sync functionality to install
 `flef` for a user on another machine over SSH without
 touching a package manager.

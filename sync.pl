@@ -95,7 +95,7 @@ sub flefSyncPush {
 
   my $remote_flef_dir = rtrim Flef::Remote::flefCommandString(qw/get dir/);
 
-  if ($?) {
+  if (! $remote_flef_dir && $?) {
     my $command_status = $? >> 8;
     die "Could not determine remote flef directory. Open status: $?. Command status: $command_status. Output:\n$remote_flef_dir";
   }
@@ -178,10 +178,11 @@ sub flefSyncPull {
 
 if ($sync_action eq "push") {
   flefSyncPush(@command_args);
+
 } elsif ($sync_action eq "pull") {
   flefSyncPull(@command_args);
-}
-else {
+
+} else {
   say "Unrecognized sync action: $sync_action";
   printUsage;
   exit 1;
